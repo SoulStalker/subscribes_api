@@ -1,0 +1,17 @@
+server:
+  port: 8080
+  mode: debug
+
+database:
+  host: ${DB_HOST:localhost}
+  port: ${DB_PORT:5432}
+  user: ${DB_USER:postgres}
+  password: ${DB_PASSWORD:secret}
+  dbname: ${DB_NAME:subscriptions}
+  sslmode: disable
+  max_conns: 25
+  max_idle_conns: 5
+
+log:
+  level: info
+  encoding: json
