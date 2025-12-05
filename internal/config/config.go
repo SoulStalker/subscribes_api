@@ -34,6 +34,7 @@ type LogConfig struct {
 	Encoding string `yaml:"encoding"`
 }
 
+// MustLoad - загружает конфигурацию из yaml файла
 func MustLoad(configPath string) *Config {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		log.Fatalf("config file does not exits: %s", configPath)
