@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn/ctxwatch"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -133,7 +132,23 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uuid.UUID) error
 }
 
 func (r *SubscriptionRepository) TotalCost(ctx context.Context, filter domain.SubscriptionFilter) (int, error) {
-	query := ``
+	query := `
+	        SELECT COALESCE(SUM(
+            price * (
+                EXTRACT(YEAR FROM AGE(
+                    LEAST(COALESCE(end_date, $2), $2),
+                    GREATEST(start_date, $1)
+                )) * 12 +
+                EXTRACT(MONTH FROM AGE(
+                    LEAST(COALESCE(end_date, $2), $2),
+                    GREATEST(start_date, $1)
+                )) + 1
+            )
+        ), 0)::INTEGER
+        FROM subscriptions
+        WHERE start_date <= $2
+          AND (end_date IS NULL OR end_date >= $1)
+	`
 
 	    args := []interface{}{filter.StartPeriod, filter.EndPeriod}
     argID := 3
