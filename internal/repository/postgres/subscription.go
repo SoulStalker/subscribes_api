@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn/ctxwatch"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -95,4 +96,66 @@ func (r *SubscriptionRepository) List(ctx context.Context, filter domain.Subscri
 	}
 	r.logger.Debug("subscriptions list", zap.Int("count", len(subs)))
 	return subs, nil
+}
+
+
+func (r *SubscriptionRepository) Update(ctx context.Context, sub *domain.Subscription) error {
+	query := `
+        UPDATE subscriptions
+        SET service_name = $1, price = $2, start_date = $3, end_date = $4
+        WHERE id = $5
+        RETURNING updated_at
+    `
+
+	err := r.db.QueryRow(ctx, query, sub.ServiceName, sub.Price, sub.StartDate, sub.EndDate, sub.ID,
+	).Scan(&sub.UpdatedAt)
+
+	if err != nil {
+		r.logger.Error("failed to update subscription", zap.String("id", sub.ID.String()), zap.Error(err))
+		return fmt.Errorf("update subscription: %w", err)
+	}
+
+	r.logger.Info("subscritption updated", zap.String("id", sub.ID.String()))
+	return nil
+}
+
+func (r *SubscriptionRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM subscriptions WHERE id = $1`
+
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		r.logger.Error("failed to delete subscription", zap.String("id", id.String()), zap.Error(err))
+		return fmt.Errorf("delete subscription")
+	}
+
+	r.logger.Info("subscription deleted", zap.String("id", id.String()))
+    return nil
+}
+
+func (r *SubscriptionRepository) TotalCost(ctx context.Context, filter domain.SubscriptionFilter) (int, error) {
+	query := ``
+
+	    args := []interface{}{filter.StartPeriod, filter.EndPeriod}
+    argID := 3
+    
+    if filter.UserID != nil {
+        query += fmt.Sprintf(" AND user_id = $%d", argID)
+        args = append(args, *filter.UserID)
+        argID++
+    }
+    
+    if filter.ServiceName != nil {
+        query += fmt.Sprintf(" AND service_name ILIKE $%d", argID)
+        args = append(args, "%"+*filter.ServiceName+"%")
+    }
+    
+    var total int
+    err := r.db.QueryRow(ctx, query, args...).Scan(&total)
+    if err != nil {
+        r.logger.Error("failed to calculate total", zap.Error(err))
+        return 0, fmt.Errorf("calculate total: %w", err)
+    }
+    
+    r.logger.Info("total cost calculated", zap.Int("total", total))
+    return total, nil
 }
