@@ -3,15 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/SoulStalker/subscribes_api/internal/config"
+	"github.com/SoulStalker/subscribes_api/internal/domain"
 	"github.com/SoulStalker/subscribes_api/internal/repository/db"
 	"github.com/SoulStalker/subscribes_api/internal/repository/postgres"
+	"github.com/SoulStalker/subscribes_api/internal/service"
+	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	
 )
 
 func main() {
@@ -32,8 +35,21 @@ func main() {
 	}
 
 	repo := postgres.NewSubscriptionRepository(dbPool, logger)
+	svc := service.NewSubscriptionService(repo, logger)
 
-	fmt.Println(repo)
+	sub := &domain.Subscription{
+		ID:          uuid.UUID{}, // или uuid.Nil
+		ServiceName: "",
+		Price:       0,
+		UserID:      uuid.UUID{},
+		StartDate:   time.Time{},
+		EndDate:     nil,
+		CreatedAt:   time.Time{},
+		UpdatedAt:   time.Time{},
+	}
+
+	err = svc.Create(context.Background(), sub)
+	fmt.Println(err)
 	fmt.Println(cfg.DB.DSN())
 }
 
