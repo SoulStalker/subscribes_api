@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -25,8 +26,20 @@ type DBConfig struct {
 	Password           string `yaml:"password"`
 	DbName             string `yaml:"dbname"`
 	SSLMode            string `yaml:"sslmode"`
-	MaxConnections     int    `yaml:"25"`
-	MaxIdleConnections int    `yaml:"5"`
+	MaxConnections     int    `yaml:"max_conns" env-default:"10"`
+	MaxIdleConnections int    `yaml:"max_idle_conns"`
+}
+
+func (c *DBConfig) DSN() string {
+	 return fmt.Sprintf(
+        "postgres://%s:%s@%s:%d/%s?sslmode=%s",
+        c.User,
+        c.Password,
+        c.Host,
+        c.Port,
+        c.DbName,
+        c.SSLMode,
+    )
 }
 
 type LogConfig struct {
