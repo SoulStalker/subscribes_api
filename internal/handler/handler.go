@@ -6,24 +6,29 @@ import (
 
 	"github.com/SoulStalker/subscribes_api/internal/domain"
 	"github.com/SoulStalker/subscribes_api/internal/service"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	_ "github.com/SoulStalker/subscribes_api/docs"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-type Handler struct {
+type SubscriptionHandler struct {
 	service *service.SubscriptionService
 	logger  *zap.Logger
 }
 
-func NewHandler(service *service.SubscriptionService, logger *zap.Logger) *Handler {
-	return &Handler{
+func NewHandler(service *service.SubscriptionService, logger *zap.Logger) *SubscriptionHandler {
+	return &SubscriptionHandler{
 		service: service,
 		logger:  logger,
 	}
 }
 
-func (h *Handler) InitRoutes(mode string) *gin.Engine {
+func (h *SubscriptionHandler) InitRoutes(mode string) *gin.Engine {
 	gin.SetMode(mode)
 	router := gin.New()
 
@@ -44,10 +49,12 @@ func (h *Handler) InitRoutes(mode string) *gin.Engine {
 		}
 	}
 
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	return router
 }
 
-func (h *Handler) loggingMiddleware() gin.HandlerFunc {
+func (h *SubscriptionHandler) loggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
@@ -80,7 +87,15 @@ func toResponse(sub *domain.Subscription) SubscriptionResponse {
 	return resp
 }
 
-func (h *Handler) create(c *gin.Context) {
+// @Summary Create subscription
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param subscription body CreateSubscriptionRequest true "Subscription data"
+// @Success 201 {object} SubscriptionResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /api/v1/subscriptions [post]
+func (h *SubscriptionHandler) create(c *gin.Context) {
 	var req CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
@@ -126,7 +141,14 @@ func (h *Handler) create(c *gin.Context) {
 	c.JSON(http.StatusCreated, toResponse(sub))
 }
 
-func (h *Handler) getByID(c *gin.Context) {
+// @Summary Get subscription by ID
+// @Tags subscriptions
+// @Produce json
+// @Param id path string true "Subscription ID"
+// @Success 200 {object} SubscriptionResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /api/v1/subscriptions/{id} [get]
+func (h *SubscriptionHandler) getByID(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid id"})
@@ -142,7 +164,14 @@ func (h *Handler) getByID(c *gin.Context) {
 	c.JSON(http.StatusOK, toResponse(sub))
 }
 
-func (h *Handler) list(c *gin.Context) {
+// @Summary List subscriptions
+// @Tags subscriptions
+// @Produce json
+// @Param user_id query string false "Filter by user ID"
+// @Param service_name query string false "Filter by service name"
+// @Success 200 {array} SubscriptionResponse
+// @Router /api/v1/subscriptions [get]
+func (h *SubscriptionHandler) list(c *gin.Context) {
 	filter := domain.SubscriptionFilter{}
 
 	if userIDStr := c.Query("user_id"); userIDStr != "" {
@@ -174,7 +203,16 @@ func (h *Handler) list(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (h *Handler) update(c *gin.Context) {
+// @Summary Update subscription
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param id path string true "Subscription ID"
+// @Param subscription body UpdateSubscriptionRequest true "Updated data"
+// @Success 200 {object} SubscriptionResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /api/v1/subscriptions/{id} [put]
+func (h *SubscriptionHandler) update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid id"})
@@ -210,7 +248,13 @@ func (h *Handler) update(c *gin.Context) {
 	c.JSON(http.StatusOK, toResponse(sub))
 }
 
-func (h *Handler) delete(c *gin.Context) {
+// @Summary Delete subscription
+// @Tags subscriptions
+// @Param id path string true "Subscription ID"
+// @Success 204
+// @Failure 404 {object} ErrorResponse
+// @Router /api/v1/subscriptions/{id} [delete]
+func (h *SubscriptionHandler) delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid id"})
@@ -225,7 +269,17 @@ func (h *Handler) delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handler) totalCost(c *gin.Context) {
+// @Summary Calculate total cost
+// @Tags subscriptions
+// @Produce json
+// @Param start_period query string true "Start period YYYY-MM-DD"
+// @Param end_period query string true "End period YYYY-MM-DD"
+// @Param user_id query string false "Filter by user ID"
+// @Param service_name query string false "Filter by service name"
+// @Success 200 {object} TotalCostResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /api/v1/subscriptions/total-cost [get]
+func (h *SubscriptionHandler) totalCost(c *gin.Context) {
 	var req TotalCostRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
