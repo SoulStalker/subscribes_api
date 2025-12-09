@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/SoulStalker/subscribes_api/internal/config"
 	"github.com/SoulStalker/subscribes_api/internal/handler"
@@ -39,13 +43,31 @@ func main() {
 	r := h.InitRoutes(cfg.Server.Mode)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+		Addr:    ":" + cfg.Server.Port,
 		Handler: r,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		panic(err)
+	go func() {
+		logger.Info("Starting server", zap.String("port", cfg.Server.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Server failed", zap.Error(err))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
+
+	logger.Info("Server exited")
 }
 
 func initLogger(cfg config.LogConfig) *zap.Logger {

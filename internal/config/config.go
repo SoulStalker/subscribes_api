@@ -15,7 +15,7 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int    `yaml:"port" env-default:"8080"`
+	Port string `yaml:"port" env-default:"8080"`
 	Mode string `yaml:"mode" env-default:"release"`
 }
 
@@ -31,15 +31,15 @@ type DBConfig struct {
 }
 
 func (c *DBConfig) DSN() string {
-	 return fmt.Sprintf(
-        "postgres://%s:%s@%s:%d/%s?sslmode=%s",
-        c.User,
-        c.Password,
-        c.Host,
-        c.Port,
-        c.DbName,
-        c.SSLMode,
-    )
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		c.User,
+		c.Password,
+		c.Host,
+		c.Port,
+		c.DbName,
+		c.SSLMode,
+	)
 }
 
 type LogConfig struct {
