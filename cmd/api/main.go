@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
+	"net/http"
 
 	"github.com/SoulStalker/subscribes_api/internal/config"
-	"github.com/SoulStalker/subscribes_api/internal/domain"
+	"github.com/SoulStalker/subscribes_api/internal/handler"
 	"github.com/SoulStalker/subscribes_api/internal/repository/db"
 	"github.com/SoulStalker/subscribes_api/internal/repository/postgres"
 	"github.com/SoulStalker/subscribes_api/internal/service"
-	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -36,21 +35,17 @@ func main() {
 
 	repo := postgres.NewSubscriptionRepository(dbPool, logger)
 	svc := service.NewSubscriptionService(repo, logger)
+	h := handler.NewHandler(svc, logger)
+	r := h.InitRoutes(cfg.Server.Mode)
 
-	sub := &domain.Subscription{
-		ID:          uuid.UUID{}, // или uuid.Nil
-		ServiceName: "",
-		Price:       0,
-		UserID:      uuid.UUID{},
-		StartDate:   time.Time{},
-		EndDate:     nil,
-		CreatedAt:   time.Time{},
-		UpdatedAt:   time.Time{},
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler: r,
 	}
 
-	err = svc.Create(context.Background(), sub)
-	fmt.Println(err)
-	fmt.Println(cfg.DB.DSN())
+	if err := srv.ListenAndServe(); err != nil {
+		panic(err)
+	}
 }
 
 func initLogger(cfg config.LogConfig) *zap.Logger {
