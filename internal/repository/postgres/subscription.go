@@ -41,7 +41,7 @@ func (r *SubscriptionRepository) Create(ctx context.Context, sub *domain.Subscri
 
 	if err != nil {
 		r.logger.Error("failed to create subscription", zap.Error(err))
-		return fmt.Errorf("create subscrioption: %w", &err)
+		return fmt.Errorf("create subscription: %w", err)
 	}
 
 	r.logger.Info("subscription created", zap.String("id", sub.ID.String()))
@@ -56,13 +56,18 @@ func (r *SubscriptionRepository) GetByID(ctx context.Context, id uuid.UUID) (*do
     `
 	var sub domain.Subscription
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&sub.ID, &sub.ServiceName, &sub.Price, &sub.UserID,
-		&sub.StartDate, &sub.Price, &sub.UserID,
-		&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
+		&sub.ID,
+		&sub.ServiceName,
+		&sub.Price,
+		&sub.UserID,
+		&sub.StartDate,
+		&sub.EndDate,
+		&sub.CreatedAt,
+		&sub.UpdatedAt,
 	)
 
 	if err != nil {
-		r.logger.Error("subsription not found", zap.String("id", id.String()), zap.Error(err))
+		r.logger.Error("subscription not found", zap.String("id", id.String()), zap.Error(err))
 		return nil, fmt.Errorf("get subscription: %w", err)
 	}
 
@@ -75,7 +80,7 @@ func (r *SubscriptionRepository) List(ctx context.Context, filter domain.Subscri
 	argID := 1
 
 	if filter.UserID != nil {
-		query += fmt.Sprintf(" AND user_id = &id", argID)
+		query += fmt.Sprintf(" AND user_id = $%d", argID)
 		args = append(args, &filter.UserID)
 		argID++
 	}
@@ -120,7 +125,7 @@ func (r *SubscriptionRepository) Update(ctx context.Context, sub *domain.Subscri
 		return fmt.Errorf("update subscription: %w", err)
 	}
 
-	r.logger.Info("subscritption updated", zap.String("id", sub.ID.String()))
+	r.logger.Info("subscription updated", zap.String("id", sub.ID.String()))
 	return nil
 }
 
@@ -156,7 +161,7 @@ func (r *SubscriptionRepository) TotalCost(ctx context.Context, filter domain.Su
           AND (end_date IS NULL OR end_date >= $1)
 	`
 
-	args := []interface{}{filter.StartPeriod, filter.EndPeriod}
+	args := []any{filter.StartPeriod, filter.EndPeriod}
 	argID := 3
 
 	if filter.UserID != nil {
