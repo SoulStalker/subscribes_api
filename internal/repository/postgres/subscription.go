@@ -5,18 +5,26 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 
 	"github.com/SoulStalker/subscribes_api/internal/domain"
 )
 
+// PgxPool интерфейс для возможности тестов через pgxmock
+type PgxPool interface {
+	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
+	Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error)
+}
+
 type SubscriptionRepository struct {
-	db     *pgxpool.Pool
+	db     PgxPool
 	logger *zap.Logger
 }
 
-func NewSubscriptionRepository(db *pgxpool.Pool, logger *zap.Logger) *SubscriptionRepository {
+func NewSubscriptionRepository(db PgxPool, logger *zap.Logger) *SubscriptionRepository {
 	return &SubscriptionRepository{db: db, logger: logger}
 }
 
@@ -97,7 +105,6 @@ func (r *SubscriptionRepository) List(ctx context.Context, filter domain.Subscri
 	return subs, nil
 }
 
-
 func (r *SubscriptionRepository) Update(ctx context.Context, sub *domain.Subscription) error {
 	query := `
         UPDATE subscriptions
@@ -106,8 +113,7 @@ func (r *SubscriptionRepository) Update(ctx context.Context, sub *domain.Subscri
         RETURNING updated_at
     `
 
-	err := r.db.QueryRow(ctx, query, sub.ServiceName, sub.Price, sub.StartDate, sub.EndDate, sub.ID,
-	).Scan(&sub.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, sub.ServiceName, sub.Price, sub.StartDate, sub.EndDate, sub.ID).Scan(&sub.UpdatedAt)
 
 	if err != nil {
 		r.logger.Error("failed to update subscription", zap.String("id", sub.ID.String()), zap.Error(err))
@@ -128,7 +134,7 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uuid.UUID) error
 	}
 
 	r.logger.Info("subscription deleted", zap.String("id", id.String()))
-    return nil
+	return nil
 }
 
 func (r *SubscriptionRepository) TotalCost(ctx context.Context, filter domain.SubscriptionFilter) (int, error) {
@@ -150,27 +156,27 @@ func (r *SubscriptionRepository) TotalCost(ctx context.Context, filter domain.Su
           AND (end_date IS NULL OR end_date >= $1)
 	`
 
-	    args := []interface{}{filter.StartPeriod, filter.EndPeriod}
-    argID := 3
-    
-    if filter.UserID != nil {
-        query += fmt.Sprintf(" AND user_id = $%d", argID)
-        args = append(args, *filter.UserID)
-        argID++
-    }
-    
-    if filter.ServiceName != nil {
-        query += fmt.Sprintf(" AND service_name ILIKE $%d", argID)
-        args = append(args, "%"+*filter.ServiceName+"%")
-    }
-    
-    var total int
-    err := r.db.QueryRow(ctx, query, args...).Scan(&total)
-    if err != nil {
-        r.logger.Error("failed to calculate total", zap.Error(err))
-        return 0, fmt.Errorf("calculate total: %w", err)
-    }
-    
-    r.logger.Info("total cost calculated", zap.Int("total", total))
-    return total, nil
+	args := []interface{}{filter.StartPeriod, filter.EndPeriod}
+	argID := 3
+
+	if filter.UserID != nil {
+		query += fmt.Sprintf(" AND user_id = $%d", argID)
+		args = append(args, *filter.UserID)
+		argID++
+	}
+
+	if filter.ServiceName != nil {
+		query += fmt.Sprintf(" AND service_name ILIKE $%d", argID)
+		args = append(args, "%"+*filter.ServiceName+"%")
+	}
+
+	var total int
+	err := r.db.QueryRow(ctx, query, args...).Scan(&total)
+	if err != nil {
+		r.logger.Error("failed to calculate total", zap.Error(err))
+		return 0, fmt.Errorf("calculate total: %w", err)
+	}
+
+	r.logger.Info("total cost calculated", zap.Int("total", total))
+	return total, nil
 }
