@@ -205,14 +205,14 @@ curl "http://localhost:8080/api/v1/subscriptions/total-cost?start_period=2025-01
 }
 ```
 
-## ⚙️ Конфигурация
+## Конфигурация
 
 ### Переменные окружения (.env)
 
 ```bash
 # PostgreSQL
-DB_HOST=postgres          # Хост БД
-DB_PORT=5432             # Порт БД
+DB_HOST=postgres          
+DB_PORT=5432             
 DB_USER=subscriptions_user
 DB_PASSWORD=strong_password_here
 DB_NAME=subscriptions_db
@@ -222,7 +222,7 @@ DB_NAME=subscriptions_db
 
 ```yaml
 server:
-  port: 8080              # HTTP-порт сервиса
+  port: 8080            
   mode: debug             # gin mode: debug/release
 
 database:
@@ -232,8 +232,8 @@ database:
   password: ${DB_PASSWORD:secret}
   dbname: ${DB_NAME:subscriptions}
   sslmode: disable
-  max_conns: 25           # Максимум соединений в пуле
-  max_idle_conns: 5       # Минимум idle соединений
+  max_conns: 25          
+  max_idle_conns: 5     
 
 log:
   level: info             # debug/info/warn/error
@@ -368,7 +368,7 @@ docker-compose up --build
 docker-compose down -v
 ```
 
-## 🔧 Разработка
+## Разработка
 
 ### Структура проекта (Clean Architecture)
 
@@ -404,7 +404,7 @@ swag fmt
 
 ### TODO
 
-- [ ] **Тесты**: юнит + интеграционные (testcontainers)
+- [ ] **Тесты**: интеграционные (testcontainers)
 - [ ] **Метрики**: Prometheus + Grafana дашборды
 - [ ] **Трейсинг**: OpenTelemetry + Jaeger
 - [ ] **Rate Limiting**: middleware для защиты от DDoS
