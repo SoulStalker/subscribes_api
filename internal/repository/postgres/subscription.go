@@ -81,7 +81,7 @@ func (r *SubscriptionRepository) List(ctx context.Context, filter domain.Subscri
 
 	if filter.UserID != nil {
 		query += fmt.Sprintf(" AND user_id = $%d", argID)
-		args = append(args, &filter.UserID)
+		args = append(args, *filter.UserID)
 		argID++
 	}
 

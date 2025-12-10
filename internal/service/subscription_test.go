@@ -173,7 +173,7 @@ func TestSubscriptionService_DeleteSubscription(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestSubscriptionService_CalculateTotalCost_Success(t *testing.T) {
+func TestSubscriptionService_TotalCost_Success(t *testing.T) {
 	mockRepo := new(testutil.MockSubscriptionRepository)
 	logger := zaptest.NewLogger(t)
 	service := NewSubscriptionService(mockRepo, logger)
@@ -189,7 +189,14 @@ func TestSubscriptionService_CalculateTotalCost_Success(t *testing.T) {
 
 	expectedTotal := 5000
 
-	mockRepo.On("CalculateTotalCost", ctx, filter).Return(expectedTotal, nil)
+	mockRepo.On(
+        "TotalCost",
+        mock.Anything,
+        mock.MatchedBy(func(f domain.SubscriptionFilter) bool {
+            return f.StartPeriod != nil && f.EndPeriod != nil &&
+                f.StartPeriod.Equal(startPeriod) && f.EndPeriod.Equal(endPeriod)
+        }),
+    ).Return(expectedTotal, nil)
 
 	total, err := service.TotalCost(ctx, filter)
 
@@ -198,7 +205,7 @@ func TestSubscriptionService_CalculateTotalCost_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestSubscriptionService_CalculateTotalCost_MissingPeriods(t *testing.T) {
+func TestSubscriptionService_TotalCost_MissingPeriods(t *testing.T) {
 	mockRepo := new(testutil.MockSubscriptionRepository)
 	logger := zaptest.NewLogger(t)
 	service := NewSubscriptionService(mockRepo, logger)
@@ -211,5 +218,5 @@ func TestSubscriptionService_CalculateTotalCost_MissingPeriods(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "start_period and end_period are required")
 	assert.Zero(t, total)
-	mockRepo.AssertNotCalled(t, "CalculateTotalCost")
+	mockRepo.AssertNotCalled(t, "TotalCost")
 }

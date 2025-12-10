@@ -173,7 +173,7 @@ func TestSubscriptionRepository_Delete(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSubscriptionRepository_CalculateTotalCost(t *testing.T) {
+func TestSubscriptionRepository_TotalCost(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -195,7 +195,7 @@ func TestSubscriptionRepository_CalculateTotalCost(t *testing.T) {
 	rows := pgxmock.NewRows([]string{"total"}).AddRow(expectedTotal)
 
 	mock.ExpectQuery("SELECT COALESCE").
-		WithArgs(startPeriod, endPeriod).
+		WithArgs(&startPeriod, &endPeriod).
 		WillReturnRows(rows)
 
 	total, err := repo.TotalCost(ctx, filter)
